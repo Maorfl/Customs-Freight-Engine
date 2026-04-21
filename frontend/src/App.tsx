@@ -9,7 +9,7 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-gray-100" dir="rtl">
         <Navbar />
-        <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <main className="container mx-auto px-4 py-8 max-w-8xl">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/preparation" element={<PreparationTable />} />

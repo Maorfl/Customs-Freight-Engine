@@ -181,6 +181,31 @@ router.post('/:id/dispatch', async (req: Request, res: Response) => {
   }
 });
 
+// PUT update shipment fields (manual edit from Preparation table)
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const allowed = [
+      'fileNumber', 'destination', 'releasePoint', 'shipmentType',
+      'containerSize', 'quantity', 'weight', 'volume', 'isDangerous', 'specialNotes',
+    ];
+    const update: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in req.body) update[key] = (req.body as Record<string, unknown>)[key];
+    }
+    const shipment = await Shipment.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+      runValidators: true,
+    });
+    if (!shipment) {
+      res.status(404).json({ message: 'משלוח לא נמצא' });
+      return;
+    }
+    res.json(shipment);
+  } catch (error) {
+    res.status(400).json({ message: 'שגיאת ולידציה', error });
+  }
+});
+
 // POST resume escalation for a paused shipment
 router.post('/:id/resume', async (req: Request, res: Response) => {
   try {

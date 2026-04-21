@@ -1,12 +1,12 @@
 import Imap from 'imap';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { Readable } from 'stream';
+// pdf-parse CJS bundle wraps the callable under .default in some environments.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import { PDFParse } from 'pdf-parse';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Shipment from '../models/Shipment';
 import { getIo } from '../socket';
-import { text } from 'stream/consumers';
 
 const FILE_NUMBER_RE = /6\d{6}/g;
 
@@ -40,74 +40,108 @@ interface ExtractedShipmentData {
   isDangerous: boolean;
 }
 
-/** Extracts shipment fields from raw PDF text using regex / string matching. */
+/** Extracts shipment fields from raw PDF text using regex / string matching.
+ *
+ *  pdf-parse / pdfjs reverses word order in RTL Hebrew PDFs, so labels appear
+ *  REVERSED and values appear BEFORE the reversed label on the same line.
+ *
+ *  Example raw line:
+ *    "1153208 שמונה קרית ,8 הירדן הובלה כתובת"
+ *  Here "הובלה כתובת" is the reversed label for כתובת הובלה (destination)
+ *  and everything before it on that line is the (also reversed) value.
+ */
 function extractShipmentData(text: string): ExtractedShipmentData {
   console.log('[IMAP Watcher] --- PDF Text Extracted ---');
   console.log('[IMAP Watcher] First 500 chars of raw text:\n', text.slice(0, 500));
   console.log('[IMAP Watcher] --- End of PDF Text Sample ---');
 
-  // fileNumber: exactly 7 digits starting with 6
-  const fileNumberMatch = text.match(/6\d{6}/);
-  const fileNumber = fileNumberMatch?.[0];
+  /** Strip stray quotes/colons and whitespace from an extracted token. */
+  const clean = (s: string) => s.replace(/["':]/g, '').trim();
 
-  // destination: text following "כתובת הובלה"
-  const destMatch = text.match(/כתובת הובלה[:\s]*([^\n\r]+)/);
-  const destination = destMatch?.[1]?.trim() || undefined;
+  /**
+   * The parsed text reverses word order.  Re-reverse the words in a string
+   * to restore the original Hebrew reading order.
+   * Example: "1153208 שמונה קרית ,8 הירדן" → "הירדן ,8 קרית שמונה 1153208"
+   */
+  const reverseWords = (s: string) => s.trim().split(/\s+/).reverse().join(' ');
 
-  // releasePoint: text following "מסוף ימי \ אווירי"
-  const releaseMatch = text.match(/מסוף ימי[\s\\\/]+אווירי[:\s]*([^\n\r]+)/);
-  const rawRelease = releaseMatch?.[1]?.trim() ?? '';
-  const releasePoint = RELEASE_POINT_MAP[rawRelease] || rawRelease || undefined;
+  try {
+    // fileNumber: 7 digits starting with 6 — position-independent
+    const fileNumberMatch = text.match(/6\d{6}/);
+    const fileNumber = fileNumberMatch?.[0];
 
-  // shipmentType & containerSize: from "סוג אריזה"
-  const packagingMatch = text.match(/סוג אריזה[:\s]*([^\n\r]+)/);
-  const packagingText = packagingMatch?.[1]?.trim() ?? '';
-  let shipmentType: 'FCL' | 'LCL' = 'LCL';
-  let containerSize: 20 | 40 | undefined;
-  if (packagingText.includes('מכולה - 20')) {
-    shipmentType = 'FCL';
-    containerSize = 20;
-  } else if (packagingText.includes('מכולה - 40')) {
-    shipmentType = 'FCL';
-    containerSize = 40;
-  }
-
-  // quantity: number after "מס' אריזות" or "מס׳ אריזות"
-  const quantityMatch = text.match(/מס['׳]\s*אריזות[:\s]*(\d+)/);
-  const quantity = quantityMatch ? parseInt(quantityMatch[1], 10) : undefined;
-
-  // weight: number after "משקל"
-  const weightMatch = text.match(/משקל[:\s]*(\d+(?:[.,]\d+)?)/);
-  const weight = weightMatch
-    ? parseFloat(weightMatch[1].replace(',', '.'))
-    : undefined;
-
-  // volume: number after "נפח" (only relevant for LCL)
-  let volume: number | undefined;
-  if (shipmentType === 'LCL') {
-    const volumeMatch = text.match(/נפח[:\s]*(\d+(?:[.,]\d+)?)/);
-    volume = volumeMatch
-      ? parseFloat(volumeMatch[1].replace(',', '.'))
+    // destination: everything before reversed label "הובלה כתובת"
+    const destMatch = text.match(/([^\n\r]+?)\s*הובלה כתובת/);
+    const destination = destMatch
+      ? reverseWords(clean(destMatch[1])) || undefined
       : undefined;
+
+    // releasePoint: everything before reversed label "אווירי \ ימי מסוף"
+    const releaseMatch = text.match(/([^\n\r]+?)\s*אווירי\s*[\\]\s*ימי מסוף/);
+    const rawRelease = releaseMatch ? clean(releaseMatch[1]) : '';
+    const releasePoint = RELEASE_POINT_MAP[rawRelease] || rawRelease || undefined;
+
+    // containerType: everything before reversed label ":אריזה סוג" or "אריזה סוג"
+    // Values: "20 - מכולה" / "40 - מכולה" / "מוגדר ובלתי שונים"
+    const packagingMatch = text.match(/([^\n\r]+?)\s*:?אריזה סוג/);
+    const packagingText = packagingMatch ? clean(packagingMatch[1]) : '';
+    let shipmentType: 'FCL' | 'LCL' = 'LCL';
+    let containerSize: 20 | 40 | undefined;
+    // reversed "מכולה - 20" → "20 - מכולה"
+    if (packagingText.includes('20 - מכולה') || packagingText.includes('מכולה - 20')) {
+      shipmentType = 'FCL';
+      containerSize = 20;
+    } else if (packagingText.includes('40 - מכולה') || packagingText.includes('מכולה - 40')) {
+      shipmentType = 'FCL';
+      containerSize = 40;
+    }
+
+    // quantity: number before reversed label ":אריזות 'מס" / ":אריזות ׳מס"
+    const quantityMatch = text.match(/(\d+)\s*:?אריזות\s*['׳]מס/);
+    const quantity = quantityMatch ? parseInt(quantityMatch[1], 10) : undefined;
+
+    // weight: decimal number before reversed label ":משקל" / "משקל"
+    // Numbers may contain commas as thousands separators (e.g. 1,244.00)
+    const weightMatch = text.match(/([\d.,]+)\s*:?משקל/);
+    const weight = weightMatch
+      ? parseFloat(clean(weightMatch[1]).replace(/,/g, ''))
+      : undefined;
+
+    // volume: decimal number before reversed label ":נפח" / "נפח" (LCL only)
+    let volume: number | undefined;
+    if (shipmentType === 'LCL') {
+      const volumeMatch = text.match(/([\d.,]+)\s*:?נפח/);
+      volume = volumeMatch
+        ? parseFloat(clean(volumeMatch[1]).replace(/,/g, ''))
+        : undefined;
+    }
+
+    // isDangerous: English word before reversed label "מסוכן חומר"
+    // "Dangerous" → dangerous goods; "General" → not dangerous
+    const dangerMatch = text.match(/([A-Za-z]+)\s*:?מסוכן חומר/) ||
+                        text.match(/([A-Za-z]+)\s*:?חומר מסוכן/);
+    const isDangerous = dangerMatch
+      ? dangerMatch[1].toLowerCase().includes('dangerous')
+      : false;
+
+    const dataObj: ExtractedShipmentData = {
+      fileNumber,
+      destination,
+      releasePoint,
+      shipmentType,
+      containerSize,
+      quantity,
+      weight,
+      volume,
+      isDangerous,
+    };
+
+    console.log('[IMAP Watcher] Extracted Data:', JSON.stringify(dataObj, null, 2));
+    return dataObj;
+  } catch (err) {
+    console.error('[IMAP Watcher] extractShipmentData error:', err);
+    return { shipmentType: 'LCL', isDangerous: false };
   }
-
-  // isDangerous: "חומר מסוכן" line contains the word "Dangerous"
-  const dangerMatch = text.match(/חומר מסוכן[:\s]*([^\n\r]+)/);
-  const isDangerous = dangerMatch
-    ? dangerMatch[1].includes('Dangerous')
-    : false;
-
-  return {
-    fileNumber,
-    destination,
-    releasePoint,
-    shipmentType,
-    containerSize,
-    quantity,
-    weight,
-    volume,
-    isDangerous,
-  };
 }
 
 /**

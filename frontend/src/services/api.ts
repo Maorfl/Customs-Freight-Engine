@@ -60,6 +60,9 @@ export const shipmentsApi = {
   delete: (id: string): Promise<{ message: string }> =>
     api.delete(`/shipments/${id}`).then((r) => r.data),
 
+  update: (id: string, data: Partial<Shipment>): Promise<Shipment> =>
+    api.put<Shipment>(`/shipments/${id}`, data).then((r) => r.data),
+
   resume: (id: string): Promise<Shipment> =>
     api.post<Shipment>(`/shipments/${id}/resume`).then((r) => r.data),
 
