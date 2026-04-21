@@ -62,4 +62,17 @@ export const shipmentsApi = {
 
   resume: (id: string): Promise<Shipment> =>
     api.post<Shipment>(`/shipments/${id}/resume`).then((r) => r.data),
+
+  uploadPackingList: (id: string, file: File): Promise<Shipment> => {
+    const form = new FormData();
+    form.append('packingList', file);
+    return api
+      .patch<Shipment>(`/shipments/${id}/packing-list`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  dispatch: (id: string): Promise<Shipment> =>
+    api.post<Shipment>(`/shipments/${id}/dispatch`).then((r) => r.data),
 };

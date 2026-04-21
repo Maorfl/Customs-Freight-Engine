@@ -10,13 +10,14 @@ export interface IShipment extends Document {
   releasePoint: string;
   isDangerous: boolean;
   shipmentType: 'FCL' | 'LCL';
+  containerSize?: 20 | 40;
   quantity: number;
   weight: number;
   volume?: number;
   destination: string;
   specialNotes?: string;
   packingListUrl?: string;
-  status: 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
+  status: 'Preparation' | 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
   repliedBy?: string;          // carrier name (or email) that sent the first reply
   isQueueFinished: boolean;    // true once every carrier in the queue has been contacted
   currentCarrierIndex: number;
@@ -47,6 +48,13 @@ const ShipmentSchema = new Schema<IShipment>(
     releasePoint: { type: String, required: true, trim: true },
     isDangerous: { type: Boolean, default: false },
     shipmentType: { type: String, enum: ['FCL', 'LCL'], required: true },
+    containerSize: {
+      type: Number,
+      enum: [20, 40],
+      required: function (this: IShipment) {
+        return this.shipmentType === 'FCL';
+      },
+    },
     quantity: { type: Number, required: true, min: 1 },
     weight: { type: Number, required: true, min: 0 },
     volume: { type: Number, min: 0 },
@@ -55,7 +63,7 @@ const ShipmentSchema = new Schema<IShipment>(
     packingListUrl: { type: String },
     status: {
       type: String,
-      enum: ['Pending', 'Processing', 'Paused - Reply Received', 'Completed'],
+      enum: ['Preparation', 'Pending', 'Processing', 'Paused - Reply Received', 'Completed'],
       default: 'Pending',
     },
     currentCarrierIndex: { type: Number, default: 0 },

@@ -21,10 +21,11 @@ function buildEmailBody(shipment: IShipment): string {
 
   let shipmentTypeText: string;
   if (shipment.shipmentType === 'FCL') {
+    const sizeLabel = shipment.containerSize ? ` ${shipment.containerSize}'` : '';
     shipmentTypeText =
       shipment.quantity === 1
-        ? 'מכולה מלאה'
-        : `${shipment.quantity} מכולות מלאות`;
+        ? `מכולה מלאה${sizeLabel}`
+        : `${shipment.quantity} מכולות מלאות${sizeLabel}`;
   } else {
     shipmentTypeText = 'משלוח חלקי';
   }

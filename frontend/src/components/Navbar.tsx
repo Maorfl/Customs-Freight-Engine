@@ -28,6 +28,9 @@ export default function Navbar() {
             <NavLink to="/" end className={linkClass}>
               לוח בקרה
             </NavLink>
+            <NavLink to="/preparation" className={linkClass}>
+              הכנה למשלוח
+            </NavLink>
             <NavLink to="/carriers" className={linkClass}>
               ניהול מובילים
             </NavLink>

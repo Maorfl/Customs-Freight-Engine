@@ -24,7 +24,7 @@ export interface CarrierQueueItem {
   emails: string[];
 }
 
-export type ShipmentStatus = 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
+export type ShipmentStatus = 'Preparation' | 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
 export type ShipmentType = 'FCL' | 'LCL';
 
 export interface Shipment {
@@ -33,6 +33,7 @@ export interface Shipment {
   releasePoint: string;
   isDangerous: boolean;
   shipmentType: ShipmentType;
+  containerSize?: 20 | 40;
   quantity: number;
   weight: number;
   volume?: number;

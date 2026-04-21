@@ -62,11 +62,17 @@ router.post('/', (req: Request, res: Response) => {
         return;
       }
 
+      const containerSize =
+        shipmentType === 'FCL' && (body.containerSize === '20' || body.containerSize === '40')
+          ? (Number(body.containerSize) as 20 | 40)
+          : undefined;
+
       const shipment = new Shipment({
         fileNumber: body.fileNumber,
         releasePoint: body.releasePoint,
         isDangerous: body.isDangerous === 'true',
         shipmentType,
+        containerSize,
         quantity: Number(body.quantity),
         weight: Number(body.weight),
         volume:
@@ -101,6 +107,78 @@ router.post('/', (req: Request, res: Response) => {
       res.status(400).json({ message: 'שגיאת ולידציה', error });
     }
   });
+});
+
+// PATCH upload/replace packing list for a preparation shipment
+router.patch('/:id/packing-list', (req: Request, res: Response) => {
+  packingListUpload(req, res, async (err) => {
+    if (err) {
+      res.status(400).json({ message: err.message });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ message: 'לא הועלה קובץ' });
+      return;
+    }
+    try {
+      const shipment = await Shipment.findByIdAndUpdate(
+        req.params.id,
+        { packingListUrl: `uploads/packing-lists/${req.file.filename}` },
+        { new: true }
+      );
+      if (!shipment) {
+        res.status(404).json({ message: 'משלוח לא נמצא' });
+        return;
+      }
+      res.json(shipment);
+    } catch (error) {
+      res.status(500).json({ message: 'שגיאת שרת', error });
+    }
+  });
+});
+
+// POST dispatch a preparation shipment — builds carrier queue and triggers escalation
+router.post('/:id/dispatch', async (req: Request, res: Response) => {
+  try {
+    const shipment = await Shipment.findById(req.params.id);
+    if (!shipment) {
+      res.status(404).json({ message: 'משלוח לא נמצא' });
+      return;
+    }
+    if (shipment.status !== 'Preparation') {
+      res.status(400).json({ message: 'משלוח אינו בסטטוס הכנה' });
+      return;
+    }
+
+    const carriersQueue = getCarriersForShipment(
+      shipment.releasePoint,
+      shipment.shipmentType
+    );
+    if (carriersQueue.length === 0) {
+      res.status(400).json({
+        message: 'לא נמצאו ספקים עבור נקודת השחרור שנבחרה',
+      });
+      return;
+    }
+
+    shipment.carriersQueue = carriersQueue;
+    await shipment.save();
+
+    try {
+      await initiateEscalation(shipment._id.toString());
+    } catch (emailError) {
+      res.status(500).json({
+        message: 'שגיאה בשליחת האימייל.',
+        error: emailError,
+      });
+      return;
+    }
+
+    const saved = await Shipment.findById(shipment._id);
+    res.json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'שגיאת שרת', error });
+  }
 });
 
 // POST resume escalation for a paused shipment

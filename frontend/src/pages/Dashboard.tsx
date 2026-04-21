@@ -31,6 +31,7 @@ interface FormState {
   releasePoint: string;
   isDangerous: boolean;
   shipmentType: 'FCL' | 'LCL';
+  containerSize: '20' | '40' | '';
   quantity: string;
   weight: string;
   volume: string;
@@ -44,6 +45,7 @@ const EMPTY_FORM: FormState = {
   releasePoint: '',
   isDangerous: false,
   shipmentType: 'FCL',
+  containerSize: '',
   quantity: '',
   weight: '',
   volume: '',
@@ -139,6 +141,9 @@ export default function Dashboard() {
     if (!form.weight || Number(form.weight) <= 0) {
       e.weight = 'נא להזין משקל תקין';
     }
+    if (form.shipmentType === 'FCL' && !form.containerSize) {
+      e.containerSize = 'נא לבחור גודל מכולה עבור FCL';
+    }
     if (
       form.shipmentType === 'LCL' &&
       (!form.volume || Number(form.volume) <= 0)
@@ -163,6 +168,9 @@ export default function Dashboard() {
       data.append('releasePoint', form.releasePoint);
       data.append('isDangerous', String(form.isDangerous));
       data.append('shipmentType', form.shipmentType);
+      if (form.shipmentType === 'FCL' && form.containerSize) {
+        data.append('containerSize', form.containerSize);
+      }
       data.append('quantity', form.quantity);
       data.append('weight', form.weight);
       if (form.shipmentType === 'LCL' && form.volume) {
@@ -345,7 +353,7 @@ export default function Dashboard() {
                       value={t}
                       checked={form.shipmentType === t}
                       onChange={() =>
-                        setForm((p) => ({ ...p, shipmentType: t, volume: '' }))
+                        setForm((p) => ({ ...p, shipmentType: t, volume: '', containerSize: '' }))
                       }
                       className="accent-blue-600 w-4 h-4"
                     />
@@ -373,6 +381,36 @@ export default function Dashboard() {
               </label>
             </div>
           </div>
+
+          {/* Container Size — only for FCL */}
+          {form.shipmentType === 'FCL' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <p className="block text-sm font-medium text-gray-700 mb-2">
+                  גודל מכולה <span className="text-red-500">*</span>
+                </p>
+                <div className="flex gap-6">
+                  {(['20', '40'] as const).map((size) => (
+                    <label key={size} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        value={size}
+                        checked={form.containerSize === size}
+                        onChange={() =>
+                          setForm((p) => ({ ...p, containerSize: size }))
+                        }
+                        className="accent-blue-600 w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-700">{size}&#x2032;</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.containerSize && (
+                  <p className="mt-1 text-xs text-red-500">{errors.containerSize}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Row 3 — Quantity / Weight / Volume */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
