@@ -30,9 +30,9 @@ function buildEmailBody(shipment: IShipment): string {
     shipmentTypeText = 'משלוח חלקי';
   }
 
-  const shiperName = shipment.carriersQueue[0]?.name || '';
+  const shipperName = shipment.carriersQueue[shipment.currentCarrierIndex]?.name || '';
 
-  let body = `היי צוות ${shiperName},\n\n`;
+  let body = `היי צוות ${shipperName},\n\n`;
   body += `נשמח לקבל הצעת מחיר עבור הובלה של ${shipmentTypeText} מ${portName} ל${shipment.destination}.\n`;
   body += `כמות - ${shipment.quantity}, משקל - ${shipment.weight} ק"ג`;
 

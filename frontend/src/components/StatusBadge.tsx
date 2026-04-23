@@ -10,7 +10,7 @@ export default function StatusBadge({ status, repliedBy }: Props) {
   if (repliedBy) {
     return (
       <span className="inline-flex flex-wrap items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-200 whitespace-nowrap">
-        מענה מכ: <span className="font-bold">{repliedBy}</span>
+        מענה מ: <span className="font-bold">{repliedBy}</span>
       </span>
     );
   }

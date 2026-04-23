@@ -329,6 +329,7 @@ async function handleDispatchNote(parsed: ParsedMail): Promise<void> {
   try {
     await shipmentDoc.save();
     getIo()?.emit('shipment:created', shipmentDoc.toObject());
+    console.log(`[Socket] Emitted shipment:created for file: ${data.fileNumber}`);
     console.log(
       `[IMAP Watcher] ✓ Created Preparation shipment for file ${data.fileNumber}`
     );
@@ -371,8 +372,15 @@ async function handleIncomingEmail(
     );
     shipment.repliedBy = matchedCarrier?.name ?? (fromEmail || 'לא ידוע');
     shipment.status = 'Paused - Reply Received';
+    shipment.isUnread = true;
     await shipment.save();
     getIo()?.emit('shipment:updated', shipment.toObject());
+    console.log(`[Socket] Emitted shipment:updated for file: ${fileNumber}`);
+    getIo()?.emit('carrier_reply_received', {
+      fileNumber: shipment.fileNumber,
+      carrierName: shipment.carriersQueue[shipment.currentCarrierIndex]?.name,
+    });
+    console.log(`[Socket] Emitted carrier_reply_received for file: ${fileNumber}`);
 
     console.log(
       `[IMAP Watcher] Reply from "${shipment.repliedBy}" for shipment ${fileNumber} — escalation paused.`

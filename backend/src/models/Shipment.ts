@@ -20,6 +20,7 @@ export interface IShipment extends Document {
   status: 'Preparation' | 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
   repliedBy?: string;          // carrier name (or email) that sent the first reply
   isQueueFinished: boolean;    // true once every carrier in the queue has been contacted
+  isUnread: boolean;           // true when a carrier reply has not yet been seen by the user
   currentCarrierIndex: number;
   carriersQueue: CarrierQueueItem[];
   lastEmailSentAt?: Date;
@@ -71,6 +72,7 @@ const ShipmentSchema = new Schema<IShipment>(
     lastEmailSentAt: { type: Date },
     repliedBy: { type: String, trim: true },
     isQueueFinished: { type: Boolean, default: false },
+    isUnread: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

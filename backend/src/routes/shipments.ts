@@ -164,8 +164,9 @@ router.post('/:id/dispatch', async (req: Request, res: Response) => {
     shipment.carriersQueue = carriersQueue;
     await shipment.save();
 
+    let carrierName: string;
     try {
-      await initiateEscalation(shipment._id.toString());
+      carrierName = await initiateEscalation(shipment._id.toString());
     } catch (emailError) {
       res.status(500).json({
         message: 'שגיאה בשליחת האימייל.',
@@ -175,7 +176,7 @@ router.post('/:id/dispatch', async (req: Request, res: Response) => {
     }
 
     const saved = await Shipment.findById(shipment._id);
-    res.json(saved);
+    res.json({ message: 'האשכול הופעל בהצלחה', carrierName, shipment: saved });
   } catch (error) {
     res.status(500).json({ message: 'שגיאת שרת', error });
   }
@@ -209,13 +210,31 @@ router.put('/:id', async (req: Request, res: Response) => {
 // POST resume escalation for a paused shipment
 router.post('/:id/resume', async (req: Request, res: Response) => {
   try {
-    await resumeEscalation(req.params.id);
+    const carrierName = await resumeEscalation(req.params.id);
     const shipment = await Shipment.findById(req.params.id);
-    res.json(shipment);
+    res.json({ message: 'האשכול חודש בהצלחה', carrierName, shipment });
   } catch (error: unknown) {
     const msg =
       error instanceof Error ? error.message : 'שגיאה בחידוש האשכול';
     res.status(400).json({ message: msg });
+  }
+});
+
+// PATCH mark shipment as read (clears the unread notification dot)
+router.patch('/:id/read', async (req: Request, res: Response) => {
+  try {
+    const shipment = await Shipment.findByIdAndUpdate(
+      req.params.id,
+      { isUnread: false },
+      { new: true }
+    );
+    if (!shipment) {
+      res.status(404).json({ message: 'משלוח לא נמצא' });
+      return;
+    }
+    res.json(shipment);
+  } catch (error) {
+    res.status(500).json({ message: 'שגיאת שרת', error });
   }
 });
 

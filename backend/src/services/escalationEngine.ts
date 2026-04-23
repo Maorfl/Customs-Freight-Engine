@@ -79,9 +79,9 @@ async function processEscalations(): Promise<void> {
  * Sends the very first quote request for a new shipment and sets its status.
  * Called immediately after a shipment is created.
  */
-export async function initiateEscalation(shipmentId: string): Promise<void> {
+export async function initiateEscalation(shipmentId: string): Promise<string> {
   const shipment = await Shipment.findById(shipmentId);
-  if (!shipment || shipment.carriersQueue.length === 0) return;
+  if (!shipment || shipment.carriersQueue.length === 0) return "";
 
   const firstCarrier = shipment.carriersQueue[0];
 
@@ -99,6 +99,7 @@ export async function initiateEscalation(shipmentId: string): Promise<void> {
   console.log(
     `[Escalation Engine] Initial email sent to ${firstCarrier.name} for shipment ${shipment.fileNumber}`
   );
+  return firstCarrier.name;
 }
 
 /**
@@ -108,7 +109,7 @@ export async function initiateEscalation(shipmentId: string): Promise<void> {
  * - Resets lastEmailSentAt so the 30-minute clock restarts from now
  * - Sets status back to Processing (or Completed if it was the last carrier)
  */
-export async function resumeEscalation(shipmentId: string): Promise<void> {
+export async function resumeEscalation(shipmentId: string): Promise<string> {
   const shipment = await Shipment.findById(shipmentId);
   if (!shipment) throw new Error('Shipment not found');
 
@@ -129,21 +130,22 @@ export async function resumeEscalation(shipmentId: string): Promise<void> {
     console.log(
       `[Escalation Engine] No more carriers for ${shipment.fileNumber} — marked Completed.`
     );
-    return;
+    return '';
   }
 
   const nextCarrier = shipment.carriersQueue[nextIndex];
-  await sendQuoteRequest(shipment, nextCarrier.emails);
-
+  
   shipment.currentCarrierIndex = nextIndex;
   shipment.lastEmailSentAt = new Date();
   shipment.status =
-    nextIndex === shipment.carriersQueue.length - 1 ? 'Completed' : 'Processing';
+  nextIndex === shipment.carriersQueue.length - 1 ? 'Completed' : 'Processing';
   if (nextIndex === shipment.carriersQueue.length - 1) shipment.isQueueFinished = true;
-
+  
+  await sendQuoteRequest(shipment, nextCarrier.emails);
   await shipment.save();
   getIo()?.emit('shipment:updated', shipment.toObject());
   console.log(
     `[Escalation Engine] Resumed — sent to ${nextCarrier.name} for shipment ${shipment.fileNumber}`
   );
+  return nextCarrier.name;
 }

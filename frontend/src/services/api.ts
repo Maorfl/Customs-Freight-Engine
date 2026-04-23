@@ -63,8 +63,8 @@ export const shipmentsApi = {
   update: (id: string, data: Partial<Shipment>): Promise<Shipment> =>
     api.put<Shipment>(`/shipments/${id}`, data).then((r) => r.data),
 
-  resume: (id: string): Promise<Shipment> =>
-    api.post<Shipment>(`/shipments/${id}/resume`).then((r) => r.data),
+  resume: (id: string): Promise<{ shipment: Shipment; carrierName: string }> =>
+    api.post<{ shipment: Shipment; carrierName: string }>(`/shipments/${id}/resume`).then((r) => r.data),
 
   uploadPackingList: (id: string, file: File): Promise<Shipment> => {
     const form = new FormData();
@@ -76,6 +76,9 @@ export const shipmentsApi = {
       .then((r) => r.data);
   },
 
-  dispatch: (id: string): Promise<Shipment> =>
-    api.post<Shipment>(`/shipments/${id}/dispatch`).then((r) => r.data),
+  dispatch: (id: string): Promise<{ shipment: Shipment; carrierName: string }> =>
+    api.post<{ shipment: Shipment; carrierName: string }>(`/shipments/${id}/dispatch`).then((r) => r.data),
+
+  markAsRead: (id: string): Promise<Shipment> =>
+    api.patch<Shipment>(`/shipments/${id}/read`).then((r) => r.data),
 };

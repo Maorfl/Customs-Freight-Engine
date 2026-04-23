@@ -46,6 +46,7 @@ export interface Shipment {
   lastEmailSentAt?: string;
   repliedBy?: string;        // name/email of the carrier who replied
   isQueueFinished?: boolean; // true once every carrier has been emailed
+  isUnread?: boolean;        // true when a carrier reply has not been seen
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Pencil, Trash2, Paperclip, Eye, X, Send } from "lucide-react";
+import { Pencil, Trash2, Paperclip, Eye, X, Send, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { shipmentsApi } from "../services/api";
 import type { Shipment } from "../types";
 import socket from "../services/socket";
@@ -326,8 +327,15 @@ export default function PreparationTable() {
         setDispatchingId(id);
         setErrorMap((m) => ({ ...m, [id]: "" }));
         try {
-            await shipmentsApi.dispatch(id);
+            const result = await shipmentsApi.dispatch(id);
             setShipments((prev) => prev.filter((s) => s._id !== id));
+            toast.success(
+                <div className="flex flex-col text-right">
+                    <span className="font-bold text-gray-900">אימייל נשלח למוביל {result.carrierName}</span>
+                    <span className="text-sm text-gray-600 mt-1">ניתן לעקוב אחרי עדכונים עבור בקשת הצעת המחיר בעמוד לוח בקרה</span>
+                </div>,
+                { duration: 5000 }
+            );
         } catch (err: unknown) {
             const msg =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "שגיאה בשליחה";
@@ -524,7 +532,11 @@ export default function PreparationTable() {
                             disabled:opacity-50 disabled:cursor-not-allowed
                             text-white text-xs font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap"
                                                 >
-                                                    <Send size={13} />
+                                                    {dispatchingId === s._id ? (
+                                                        <Loader2 size={13} className="animate-spin" />
+                                                    ) : (
+                                                        <Send size={13} />
+                                                    )}
                                                     {dispatchingId === s._id ? "שולח..." : "שלח"}
                                                 </button>
                                             </td>
