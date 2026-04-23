@@ -37,6 +37,8 @@ async function processEscalations(): Promise<void> {
   for (const shipment of shipments) {
     const nextIndex = shipment.currentCarrierIndex + 1;
 
+
+
     if (nextIndex < shipment.carriersQueue.length) {
       const nextCarrier = shipment.carriersQueue[nextIndex];
 

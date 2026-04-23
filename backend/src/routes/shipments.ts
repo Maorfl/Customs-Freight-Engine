@@ -57,7 +57,7 @@ router.post('/', (req: Request, res: Response) => {
       );
       if (carriersQueue.length === 0) {
         res.status(400).json({
-          message: 'לא נמצאו ספקים עבור נקודת השחרור שנבחרה',
+          message: 'לא נמצאו מובילים עבור נקודת השחרור שנבחרה',
         });
         return;
       }
@@ -156,7 +156,7 @@ router.post('/:id/dispatch', async (req: Request, res: Response) => {
     );
     if (carriersQueue.length === 0) {
       res.status(400).json({
-        message: 'לא נמצאו ספקים עבור נקודת השחרור שנבחרה',
+        message: 'לא נמצאו מובילים עבור נקודת השחרור שנבחרה',
       });
       return;
     }

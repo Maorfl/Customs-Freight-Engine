@@ -16,16 +16,16 @@ const FILE_NUMBER_RE = /6\d{6}/g;
  */
 const RELEASE_POINT_MAP: Record<string, string> = {
   // Fill in with the actual Hebrew strings extracted from dispatch PDFs, e.g.:
-  // 'נמל חיפה':      'ILHFA',
-  // 'מפרץ חיפה':     'ILHBT',
-  // 'אוברסיז חיפה':  'ILOVR',
-  // 'מדלוג חיפה':    'ILHDC',
-  // 'נמל אשדוד':     'ILASH',
-  // 'אשדוד דרום':    'ILAST',
-  // 'אוברסיז אשדוד': 'ILOVO',
-  // 'מסוף 207':      'ILMTS',
-  // 'גולד בונד':     'ILCXQ',
-  // 'בונדד אשדוד':   'ILBXQ',
+  'נמל חיפה': 'ILHFA',
+  'מפרץ חיפה': 'ILHBT',
+  'אוברסיז חיפה': 'ILOVR',
+  'מדלוג חיפה': 'ILHDC',
+  'נמל אשדוד': 'ILASH',
+  'אשדוד דרום': 'ILAST',
+  'אוברסיז אשדוד': 'ILOVO',
+  'מסוף 207': 'ILMTS',
+  'גולד בונד': 'ILCXQ',
+  'בונדד אשדוד': 'ILBXQ',
 };
 
 interface ExtractedShipmentData {
@@ -79,8 +79,34 @@ function extractShipmentData(text: string): ExtractedShipmentData {
     // releasePoint: everything before reversed label "אווירי \ ימי מסוף"
     const releaseMatch = text.match(/([^\n\r]+?)\s*אווירי\s*[\\]\s*ימי מסוף/);
     const rawRelease = releaseMatch ? clean(releaseMatch[1]) : '';
-    const releasePoint = RELEASE_POINT_MAP[rawRelease] || rawRelease || undefined;
-
+    let releasePoint: string | undefined;
+    if (rawRelease.includes('אשדוד')) {
+      if (rawRelease.includes('דרום')) {
+        releasePoint = 'אשדוד דרום';
+      } else if (rawRelease.includes('אוברסיז')) {
+        releasePoint = 'אוברסיז אשדוד';
+      } else if (rawRelease.includes('207')) {
+        releasePoint = 'מסוף 207';
+      } else if (rawRelease.includes('גולד')) {
+        releasePoint = 'גולד בונד';
+      } else if (rawRelease.includes('בונדד')) {
+        releasePoint = 'בונדד אשדוד';
+      } else {
+        releasePoint = 'נמל אשדוד';
+      }
+    } else if (rawRelease.includes('חיפה')) {
+      if (rawRelease.includes('מפרץ')) {
+        releasePoint = 'מפרץ חיפה';
+      } else if (rawRelease.includes('אוברסיז')) {
+        releasePoint = 'אוברסיז חיפה';
+      } else if (rawRelease.includes('מדלוג')) {
+        releasePoint = 'מדלוג חיפה';
+      } else {
+        releasePoint = 'נמל חיפה';
+      }
+    } else {
+      releasePoint = RELEASE_POINT_MAP[rawRelease] || rawRelease || undefined;
+    }
     // containerType: everything before reversed label ":אריזה סוג" or "אריזה סוג"
     // Values: "20 - מכולה" / "40 - מכולה" / "מוגדר ובלתי שונים"
     const packagingMatch = text.match(/([^\n\r]+?)\s*:?אריזה סוג/);
@@ -119,7 +145,7 @@ function extractShipmentData(text: string): ExtractedShipmentData {
     // isDangerous: English word before reversed label "מסוכן חומר"
     // "Dangerous" → dangerous goods; "General" → not dangerous
     const dangerMatch = text.match(/([A-Za-z]+)\s*:?מסוכן חומר/) ||
-                        text.match(/([A-Za-z]+)\s*:?חומר מסוכן/);
+      text.match(/([A-Za-z]+)\s*:?חומר מסוכן/);
     const isDangerous = dangerMatch
       ? dangerMatch[1].toLowerCase().includes('dangerous')
       : false;
@@ -439,8 +465,8 @@ function fetchLatestMessages(imap: Imap, count: number): void {
             const fromEmail: string =
               (
                 parsed.from?.value as
-                  | Array<{ address?: string }>
-                  | undefined
+                | Array<{ address?: string }>
+                | undefined
               )?.[0]?.address ?? '';
 
             console.log('[IMAP Watcher] --- Incoming Email Detected ---');
