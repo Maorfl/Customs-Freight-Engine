@@ -20,22 +20,22 @@ export function getCarriersForShipment(
     if (shipmentType === 'FCL') {
       carriers.push({
         name: 'קונטרם',
-        emails: ['maorfl14@gmail.com'],
+        emails: ['maorf@h-caspi.co.il'],
       });
     } else {
-      carriers.push({ name: 'קונטרם', emails: ['maorfl14@gmail.com'] });
+      carriers.push({ name: 'קונטרם', emails: ['maorf@h-caspi.co.il'] });
     }
 
-    carriers.push({ name: 'ס.מ.א', emails: ['maorfl14@gmail.com'] });
-    carriers.push({ name: 'טי.אל.אס', emails: ['maorfl14@gmail.com'] });
+    carriers.push({ name: 'ס.מ.א', emails: ['maorf@h-caspi.co.il'] });
+    carriers.push({ name: 'טי.אל.אס', emails: ['maorf@h-caspi.co.il'] });
   } else if (ASHDOD_PORTS.includes(releasePoint)) {
     // Conterm is only included for מסוף 207 terminal
     if (releasePoint === 'מסוף 207') {
-      carriers.push({ name: 'קונטרם', emails: ['maorfl14@gmail.com'] });
+      carriers.push({ name: 'קונטרם', emails: ['maorf@h-caspi.co.il'] });
     }
 
-    carriers.push({ name: 'ס.מ.א', emails: ['maorfl14@gmail.com'] });
-    carriers.push({ name: 'טי.אל.אס', emails: ['maorfl14@gmail.com'] });
+    carriers.push({ name: 'ס.מ.א', emails: ['maorf@h-caspi.co.il'] });
+    carriers.push({ name: 'טי.אל.אס', emails: ['maorf@h-caspi.co.il'] });
   }
 
   return carriers;

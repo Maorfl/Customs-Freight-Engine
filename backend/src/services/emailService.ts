@@ -33,7 +33,7 @@ function buildEmailBody(shipment: IShipment): string {
   const shipperName = shipment.carriersQueue[shipment.currentCarrierIndex]?.name || '';
 
   let body = `היי צוות ${shipperName},\n\n`;
-  body += `נשמח לקבל הצעת מחיר עבור הובלה של ${shipmentTypeText} מ${portName} ל${shipment.destination}.\n`;
+  body += `נשמח לקבל הצעת מחיר עבור הובלה של ${shipmentTypeText} מ${portName} ל${shipment.destination}.\n\n`;
   body += `כמות - ${shipment.quantity}, משקל - ${shipment.weight} ק"ג`;
 
   if (shipment.shipmentType === 'LCL' && shipment.volume != null) {

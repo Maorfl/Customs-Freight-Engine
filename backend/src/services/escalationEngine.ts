@@ -3,7 +3,7 @@ import Shipment from '../models/Shipment';
 import { sendQuoteRequest } from './emailService';
 import { getIo } from '../socket';
 
-const ESCALATION_DELAY_MINUTES = 30;
+const ESCALATION_DELAY_MINUTES = 60;
 
 /**
  * Starts the cron job that checks every minute for shipments
@@ -27,7 +27,7 @@ async function processEscalations(): Promise<void> {
     now.getTime() - ESCALATION_DELAY_MINUTES * 60 * 1000
   );
 
-  // Find Processing shipments whose last email was sent at least 30 minutes ago
+  // Find Processing shipments whose last email was sent at least 60 minutes ago
   // 'Paused - Reply Received' shipments are intentionally excluded
   const shipments = await Shipment.find({
     status: 'Processing',
@@ -106,7 +106,7 @@ export async function initiateEscalation(shipmentId: string): Promise<string> {
  * Resumes a paused shipment:
  * - Advances currentCarrierIndex to the next carrier
  * - Sends the email immediately
- * - Resets lastEmailSentAt so the 30-minute clock restarts from now
+ * - Resets lastEmailSentAt so the 60-minute clock restarts from now
  * - Sets status back to Processing (or Completed if it was the last carrier)
  */
 export async function resumeEscalation(shipmentId: string): Promise<string> {

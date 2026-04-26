@@ -249,7 +249,7 @@ export default function Dashboard() {
                 {visibleShipments.map((s) => (
                   <tr
                     key={s._id}
-                    onClick={() => s.isUnread && handleMarkAsRead(s._id)}
+                    onMouseEnter={() => s.isUnread && handleMarkAsRead(s._id)}
                     className={`transition-colors duration-700 ${
                       s.isUnread
                         ? 'bg-blue-50 cursor-pointer hover:bg-blue-100'
