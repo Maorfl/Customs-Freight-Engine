@@ -24,7 +24,7 @@ export interface CarrierQueueItem {
   emails: string[];
 }
 
-export type ShipmentStatus = 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
+export type ShipmentStatus = 'Preparation' | 'Pending' | 'Processing' | 'Paused - Reply Received' | 'Completed';
 export type ShipmentType = 'FCL' | 'LCL';
 
 export interface Shipment {
@@ -33,6 +33,7 @@ export interface Shipment {
   releasePoint: string;
   isDangerous: boolean;
   shipmentType: ShipmentType;
+  containerSize?: 20 | 40;
   quantity: number;
   weight: number;
   volume?: number;
@@ -45,6 +46,7 @@ export interface Shipment {
   lastEmailSentAt?: string;
   repliedBy?: string;        // name/email of the carrier who replied
   isQueueFinished?: boolean; // true once every carrier has been emailed
+  isUnread?: boolean;        // true when a carrier reply has not been seen
   createdAt: string;
   updatedAt: string;
 }

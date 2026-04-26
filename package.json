@@ -1,0 +1,58 @@
+{
+  "name": "caspi-freight-dashboard",
+  "version": "1.0.0",
+  "description": "Caspi Freight Dashboard - Desktop Application",
+  "main": "electron.js",
+  "scripts": {
+    "start": "electron .",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend:tsc": "cd backend && npm run build",
+    "build:backend:bundle": "esbuild backend/src/index.ts --bundle --platform=node --target=node20 --outfile=backend.bundle.js --external:kerberos --external:mongodb-client-encryption --external:@mongodb-js/zstd --external:snappy --external:aws4 --external:@aws-sdk/credential-providers --external:gcp-metadata --external:socks",
+    "build:backend": "npm run build:backend:tsc && npm run build:backend:bundle",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.28.0"
+  },
+  "build": {
+    "appId": "com.caspi.freight-dashboard",
+    "productName": "Caspi Freight Dashboard",
+    "asar": false,
+    "files": [
+      "electron.js",
+      "backend.bundle.js",
+      "backend/uploads/**/*",
+      "backend/.env",
+      "frontend/dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

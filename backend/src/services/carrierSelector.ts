@@ -3,8 +3,8 @@ export interface CarrierContact {
   emails: string[];
 }
 
-const HAIFA_PORTS = ['ILHFA', 'ILHBT', 'ILOVR', 'ILHDC'];
-const ASHDOD_PORTS = ['ILASH', 'ILAST', 'ILOVO', 'ILMTS', 'ILCXQ', 'ILBXQ'];
+const HAIFA_PORTS = ['נמל חיפה', 'מפרץ חיפה', 'אוברסיז חיפה', 'מדלוג חיפה'];
+const ASHDOD_PORTS = ['נמל אשדוד', 'אשדוד דרום', 'אוברסיז אשדוד', 'מסוף 207', 'גולד בונד', 'בונדד אשדוד'];
 
 /**
  * Returns the ordered list of carrier contacts for a given shipment.
@@ -17,25 +17,25 @@ export function getCarriersForShipment(
   const carriers: CarrierContact[] = [];
 
   if (HAIFA_PORTS.includes(releasePoint)) {
-    carriers.push({ name: 'SME', emails: ['cus1@h-caspi.co.il'] });
-    carriers.push({ name: 'TLS', emails: ['cus1@h-caspi.co.il'] });
-
     if (shipmentType === 'FCL') {
       carriers.push({
-        name: 'Conterm',
-        emails: ['cus1@h-caspi.co.il'],
+        name: 'קונטרם',
+        emails: ['maorf@h-caspi.co.il'],
       });
     } else {
-      carriers.push({ name: 'Conterm', emails: ['cus1@h-caspi.co.il'] });
+      carriers.push({ name: 'קונטרם', emails: ['maorf@h-caspi.co.il'] });
     }
-  } else if (ASHDOD_PORTS.includes(releasePoint)) {
-    carriers.push({ name: 'SME', emails: ['cus1@h-caspi.co.il'] });
-    carriers.push({ name: 'TLS', emails: ['cus1@h-caspi.co.il'] });
 
-    // Conterm is only included for ILCXQ terminal
-    if (releasePoint === 'ILCXQ') {
-      carriers.push({ name: 'Conterm', emails: ['cus1@h-caspi.co.il'] });
+    carriers.push({ name: 'ס.מ.א', emails: ['maorf@h-caspi.co.il'] });
+    carriers.push({ name: 'טי.אל.אס', emails: ['maorf@h-caspi.co.il'] });
+  } else if (ASHDOD_PORTS.includes(releasePoint)) {
+    // Conterm is only included for מסוף 207 terminal
+    if (releasePoint === 'מסוף 207') {
+      carriers.push({ name: 'קונטרם', emails: ['maorf@h-caspi.co.il'] });
     }
+
+    carriers.push({ name: 'ס.מ.א', emails: ['maorf@h-caspi.co.il'] });
+    carriers.push({ name: 'טי.אל.אס', emails: ['maorf@h-caspi.co.il'] });
   }
 
   return carriers;

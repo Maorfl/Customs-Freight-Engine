@@ -3,7 +3,7 @@ import Shipment from '../models/Shipment';
 import { sendQuoteRequest } from './emailService';
 import { getIo } from '../socket';
 
-const ESCALATION_DELAY_MINUTES = 30;
+const ESCALATION_DELAY_MINUTES = 60;
 
 /**
  * Starts the cron job that checks every minute for shipments
@@ -27,7 +27,7 @@ async function processEscalations(): Promise<void> {
     now.getTime() - ESCALATION_DELAY_MINUTES * 60 * 1000
   );
 
-  // Find Processing shipments whose last email was sent at least 30 minutes ago
+  // Find Processing shipments whose last email was sent at least 60 minutes ago
   // 'Paused - Reply Received' shipments are intentionally excluded
   const shipments = await Shipment.find({
     status: 'Processing',
@@ -36,6 +36,8 @@ async function processEscalations(): Promise<void> {
 
   for (const shipment of shipments) {
     const nextIndex = shipment.currentCarrierIndex + 1;
+
+
 
     if (nextIndex < shipment.carriersQueue.length) {
       const nextCarrier = shipment.carriersQueue[nextIndex];
@@ -77,9 +79,9 @@ async function processEscalations(): Promise<void> {
  * Sends the very first quote request for a new shipment and sets its status.
  * Called immediately after a shipment is created.
  */
-export async function initiateEscalation(shipmentId: string): Promise<void> {
+export async function initiateEscalation(shipmentId: string): Promise<string> {
   const shipment = await Shipment.findById(shipmentId);
-  if (!shipment || shipment.carriersQueue.length === 0) return;
+  if (!shipment || shipment.carriersQueue.length === 0) return "";
 
   const firstCarrier = shipment.carriersQueue[0];
 
@@ -97,16 +99,17 @@ export async function initiateEscalation(shipmentId: string): Promise<void> {
   console.log(
     `[Escalation Engine] Initial email sent to ${firstCarrier.name} for shipment ${shipment.fileNumber}`
   );
+  return firstCarrier.name;
 }
 
 /**
  * Resumes a paused shipment:
  * - Advances currentCarrierIndex to the next carrier
  * - Sends the email immediately
- * - Resets lastEmailSentAt so the 30-minute clock restarts from now
+ * - Resets lastEmailSentAt so the 60-minute clock restarts from now
  * - Sets status back to Processing (or Completed if it was the last carrier)
  */
-export async function resumeEscalation(shipmentId: string): Promise<void> {
+export async function resumeEscalation(shipmentId: string): Promise<string> {
   const shipment = await Shipment.findById(shipmentId);
   if (!shipment) throw new Error('Shipment not found');
 
@@ -127,21 +130,22 @@ export async function resumeEscalation(shipmentId: string): Promise<void> {
     console.log(
       `[Escalation Engine] No more carriers for ${shipment.fileNumber} — marked Completed.`
     );
-    return;
+    return '';
   }
 
   const nextCarrier = shipment.carriersQueue[nextIndex];
-  await sendQuoteRequest(shipment, nextCarrier.emails);
-
+  
   shipment.currentCarrierIndex = nextIndex;
   shipment.lastEmailSentAt = new Date();
   shipment.status =
-    nextIndex === shipment.carriersQueue.length - 1 ? 'Completed' : 'Processing';
+  nextIndex === shipment.carriersQueue.length - 1 ? 'Completed' : 'Processing';
   if (nextIndex === shipment.carriersQueue.length - 1) shipment.isQueueFinished = true;
-
+  
+  await sendQuoteRequest(shipment, nextCarrier.emails);
   await shipment.save();
   getIo()?.emit('shipment:updated', shipment.toObject());
   console.log(
     `[Escalation Engine] Resumed — sent to ${nextCarrier.name} for shipment ${shipment.fileNumber}`
   );
+  return nextCarrier.name;
 }

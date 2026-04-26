@@ -4,16 +4,16 @@ import fs from 'fs';
 import { IShipment } from '../models/Shipment';
 
 const PORT_NAMES: Record<string, string> = {
-  ILHFA: 'נמל חיפה',
-  ILHBT: 'מסוף בית שאן',
-  ILOVR: 'נמל עכו',
-  ILHDC: 'מסוף דרום חיפה',
-  ILASH: 'נמל אשדוד',
-  ILAST: 'מסוף אשדוד דרום',
-  ILOVO: 'נמל אשדוד',
-  ILMTS: 'מסוף אשדוד',
-  ILCXQ: 'מסוף ILCXQ אשדוד',
-  ILBXQ: 'מסוף ILBXQ אשדוד',
+  ILHFA: "נמל חיפה",
+  ILHBT: "מפרץ חיפה",
+  ILOVR: "אוברסיז חיפה",
+  ILHDC: "מדלוג חיפה",
+  ILASH: "נמל אשדוד",
+  ILAST: "אשדוד דרום",
+  ILOVO: "אוברסיז אשדוד",
+  ILMTS: "מסוף 207",
+  ILCXQ: "גולד בונד",
+  ILBXQ: "בונדד אשדוד",
 };
 
 function buildEmailBody(shipment: IShipment): string {
@@ -21,17 +21,19 @@ function buildEmailBody(shipment: IShipment): string {
 
   let shipmentTypeText: string;
   if (shipment.shipmentType === 'FCL') {
+    const sizeLabel = shipment.containerSize ? ` ${shipment.containerSize}'` : '';
     shipmentTypeText =
       shipment.quantity === 1
-        ? 'מכולה מלאה'
-        : `${shipment.quantity} מכולות מלאות`;
+        ? `מכולה מלאה${sizeLabel}`
+        : `${shipment.quantity} מכולות מלאות${sizeLabel}`;
   } else {
     shipmentTypeText = 'משלוח חלקי';
   }
-  
 
-  let body = `היי,\n\n`;
-  body += `נשמח לקבל הצעת מחיר עבור הובלה של ${shipmentTypeText} מ${portName} ל${shipment.destination}.\n`;
+  const shipperName = shipment.carriersQueue[shipment.currentCarrierIndex]?.name || '';
+
+  let body = `היי צוות ${shipperName},\n\n`;
+  body += `נשמח לקבל הצעת מחיר עבור הובלה של ${shipmentTypeText} מ${portName} ל${shipment.destination}.\n\n`;
   body += `כמות - ${shipment.quantity}, משקל - ${shipment.weight} ק"ג`;
 
   if (shipment.shipmentType === 'LCL' && shipment.volume != null) {
@@ -90,7 +92,7 @@ export async function sendQuoteRequest(
   const mailOptions: nodemailer.SendMailOptions = {
     from: `"Customs Freight - H.Caspi" <${process.env.GMAIL_USER}>`,
     to: toEmails.join(', '),
-    cc: 'cus1@h-caspi.co.il',
+    // cc: 'cus1@h-caspi.co.il',
     subject,
     text: plainBody,
     html: htmlBody,

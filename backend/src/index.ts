@@ -4,8 +4,11 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { createServer } from 'http';
+import type { Server as HttpServer } from 'http';
 
-dotenv.config();
+// In production (Electron bundle), DOTENV_PATH is set by electron.js before require().
+// In development (ts-node from backend/src/), fall back to the adjacent .env file.
+dotenv.config({ path: process.env.DOTENV_PATH || path.join(__dirname, '../.env') });
 
 import carriersRouter from './routes/carriers';
 import shipmentsRouter from './routes/shipments';
@@ -13,50 +16,76 @@ import { startEscalationEngine } from './services/escalationEngine';
 import { startImapWatcher } from './services/imapWatcher';
 import { initSocketServer } from './socket';
 
-const app = express();
-const PORT = process.env.PORT || 6000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-  })
-);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+export async function startServer(): Promise<HttpServer> {
+  const app = express();
+  const isProduction = process.env.NODE_ENV === 'production';
 
-// Serve uploaded files as static assets
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  // In production the frontend is served from the same origin, so CORS is not needed.
+  // In development, proxy is handled by Vite, but we keep CORS for direct API access.
+  if (!isProduction) {
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    app.use(cors({ origin: FRONTEND_URL, credentials: true }));
+  }
 
-// Routes
-app.use('/api/carriers', carriersRouter);
-app.use('/api/shipments', shipmentsRouter);
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+  // Serve uploaded files as static assets
+  // UPLOADS_PATH is set by electron.js in production; fall back to dev path.
+  app.use('/uploads', express.static(process.env.UPLOADS_PATH || path.join(__dirname, '../uploads')));
 
-// HTTP server (required for Socket.io)
-const httpServer = createServer(app);
-initSocketServer(httpServer, FRONTEND_URL);
+  // Routes
+  app.use('/api/carriers', carriersRouter);
+  app.use('/api/shipments', shipmentsRouter);
 
-// Connect to MongoDB and start server
-mongoose
-  .connect(process.env.MONGO_URI || 'mongodb://localhost:27017/customs-freight')
-  .then(() => {
-    console.log('Connected to MongoDB');
+  // Health check
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Serve the built React app in production (Electron desktop mode)
+  if (isProduction) {
+    const distPath =
+      process.env.FRONTEND_DIST_PATH ||
+      path.join(__dirname, '../../frontend/dist');
+    app.use(express.static(distPath));
+    // All non-API routes return the React app (client-side routing)
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  // HTTP server (required for Socket.io)
+  const httpServer = createServer(app);
+  const socketCorsOrigin = isProduction
+    ? `http://localhost:${PORT}`
+    : process.env.FRONTEND_URL || 'http://localhost:3000';
+  initSocketServer(httpServer, socketCorsOrigin);
+
+  // Connect to MongoDB, then start listening
+  await mongoose.connect(
+    process.env.MONGO_URI || 'mongodb://localhost:27017/customs-freight'
+  );
+  console.log('Connected to MongoDB');
+
+  return new Promise<HttpServer>((resolve, reject) => {
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       startEscalationEngine();
       startImapWatcher();
+      resolve(httpServer);
     });
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    httpServer.once('error', reject);
+  });
+}
+
+// Auto-start when run directly (e.g. `node dist/index.js` or `ts-node src/index.ts`)
+// This block is skipped when the module is imported by Electron.
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error('Server startup error:', error);
     process.exit(1);
   });
-
-export default app;
+}
