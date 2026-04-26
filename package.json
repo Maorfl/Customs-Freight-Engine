@@ -1,0 +1,70 @@
+{
+  "name": "caspi-freight-dashboard",
+  "version": "1.0.0",
+  "description": "Caspi Freight Dashboard - Desktop Application",
+  "main": "electron.js",
+  "scripts": {
+    "start": "electron .",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.15.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "imap": "^0.8.19",
+    "mailparser": "^3.9.8",
+    "mongoose": "^8.4.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.13",
+    "pdf-parse": "^2.4.5",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.caspi.freight-dashboard",
+    "productName": "Caspi Freight Dashboard",
+    "asar": false,
+    "files": [
+      "electron.js",
+      "backend/dist/**/*",
+      "backend/uploads/**/*",
+      "backend/.env",
+      "frontend/dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
