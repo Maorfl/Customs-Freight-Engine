@@ -100,11 +100,11 @@ export async function sendQuoteRequest(
 
   // Attach packing list if one was uploaded
   if (shipment.packingListUrl) {
-    const filePath = path.join(
-      __dirname,
-      '../../',
-      shipment.packingListUrl
-    );
+    const uploadsBase = process.env.UPLOADS_PATH ?? path.join(__dirname, '../uploads');
+    // packingListUrl is stored as 'uploads/packing-lists/<filename>' — strip
+    // the leading 'uploads/' segment so we can resolve against uploadsBase.
+    const relPath = shipment.packingListUrl.replace(/^uploads[/\\]/, '');
+    const filePath = path.join(uploadsBase, relPath);
     if (fs.existsSync(filePath)) {
       mailOptions.attachments = [
         {

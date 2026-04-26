@@ -3,16 +3,12 @@ import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
 
-const UPLOADS_DIR = path.join(__dirname, '../../uploads');
-const PACKING_LISTS_DIR = path.join(UPLOADS_DIR, 'packing-lists');
-const PRICE_LISTS_DIR = path.join(UPLOADS_DIR, 'price-lists');
-
-// Ensure upload directories exist on startup
-[UPLOADS_DIR, PACKING_LISTS_DIR, PRICE_LISTS_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// Resolved lazily at request time so that UPLOADS_PATH (set by electron.js
+// before startServer() is called) is always honoured — both in production
+// (AppData) and in development (backend/uploads fallback).
+function getUploadsDir(): string {
+  return process.env.UPLOADS_PATH ?? path.join(__dirname, '../uploads');
+}
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -22,10 +18,12 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
-function createStorage(destination: string) {
+function createStorage(subDir: string) {
   return multer.diskStorage({
     destination: (_req, _file, cb) => {
-      cb(null, destination);
+      const dest = path.join(getUploadsDir(), subDir);
+      fs.mkdirSync(dest, { recursive: true });
+      cb(null, dest);
     },
     filename: (_req, file, cb) => {
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -48,13 +46,13 @@ function fileFilter(
 }
 
 export const packingListUpload = multer({
-  storage: createStorage(PACKING_LISTS_DIR),
+  storage: createStorage('packing-lists'),
   fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 }).single('packingList');
 
 export const priceListUpload = multer({
-  storage: createStorage(PRICE_LISTS_DIR),
+  storage: createStorage('price-lists'),
   fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 }).single('priceList');

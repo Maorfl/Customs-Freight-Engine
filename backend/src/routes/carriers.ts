@@ -69,7 +69,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
     // Remove associated price list file if it exists
     if (carrier.priceListUrl) {
-      const filePath = path.join(__dirname, '../../', carrier.priceListUrl);
+      const uploadsBase = process.env.UPLOADS_PATH ?? path.join(__dirname, '../uploads');
+      const relPath = carrier.priceListUrl.replace(/^uploads[\/\\]/, '');
+      const filePath = path.join(uploadsBase, relPath);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -100,7 +102,9 @@ router.post('/:id/price-list', (req: Request, res: Response) => {
       }
       // Remove the old price list file before replacing
       if (carrier.priceListUrl) {
-        const oldPath = path.join(__dirname, '../../', carrier.priceListUrl);
+        const uploadsBase = process.env.UPLOADS_PATH ?? path.join(__dirname, '../uploads');
+        const relPath = carrier.priceListUrl.replace(/^uploads[\/\\]/, '');
+        const oldPath = path.join(uploadsBase, relPath);
         if (fs.existsSync(oldPath)) {
           fs.unlinkSync(oldPath);
         }

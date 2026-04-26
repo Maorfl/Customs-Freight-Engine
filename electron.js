@@ -36,9 +36,20 @@ app.whenReady().then(async () => {
   // Mark as production so Express serves the React static build
   process.env.NODE_ENV = 'production';
 
-  // Tell the backend bundle where its resource folders live inside the package
+  // pdfjs-dist (used by pdf-parse) references DOMMatrix at module init time.
+  // It is never actually called during text extraction, so a minimal stub is
+  // enough to prevent the "DOMMatrix is not defined" crash in Node.js.
+  if (typeof global.DOMMatrix === 'undefined') {
+    global.DOMMatrix = class DOMMatrix {
+      constructor() {}
+    };
+  }
+
+  // Tell the backend bundle where its resource folders live.
+  // UPLOADS_PATH goes to the OS user-data directory so it is always writable,
+  // even in a packaged Electron app where the app bundle is read-only.
   process.env.DOTENV_PATH = path.join(app.getAppPath(), 'backend', '.env');
-  process.env.UPLOADS_PATH = path.join(app.getAppPath(), 'backend', 'uploads');
+  process.env.UPLOADS_PATH = path.join(app.getPath('userData'), 'uploads');
   process.env.FRONTEND_DIST_PATH = path.join(app.getAppPath(), 'frontend', 'dist');
 
   try {

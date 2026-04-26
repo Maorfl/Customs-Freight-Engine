@@ -27,7 +27,6 @@
     "files": [
       "electron.js",
       "backend.bundle.js",
-      "backend/uploads/**/*",
       "backend/.env",
       "frontend/dist/**/*"
     ],
