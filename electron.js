@@ -36,16 +36,14 @@ app.whenReady().then(async () => {
   // Mark as production so Express serves the React static build
   process.env.NODE_ENV = 'production';
 
-  // Tell Express where the built React app lives
-  process.env.FRONTEND_DIST_PATH = path.join(
-    app.getAppPath(),
-    'frontend',
-    'dist'
-  );
+  // Tell the backend bundle where its resource folders live inside the package
+  process.env.DOTENV_PATH = path.join(app.getAppPath(), 'backend', '.env');
+  process.env.UPLOADS_PATH = path.join(app.getAppPath(), 'backend', 'uploads');
+  process.env.FRONTEND_DIST_PATH = path.join(app.getAppPath(), 'frontend', 'dist');
 
   try {
-    // Require the compiled backend entry point
-    const { startServer } = require('./backend/dist/index');
+    // Require the single-file esbuild bundle (all backend deps inlined)
+    const { startServer } = require('./backend.bundle');
     httpServer = await startServer();
     serverPort = httpServer.address().port;
     createWindow(serverPort);

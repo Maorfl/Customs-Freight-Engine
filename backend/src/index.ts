@@ -6,8 +6,9 @@ import path from 'path';
 import { createServer } from 'http';
 import type { Server as HttpServer } from 'http';
 
-// Load .env relative to this file so it works in both dev and packaged Electron
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// In production (Electron bundle), DOTENV_PATH is set by electron.js before require().
+// In development (ts-node from backend/src/), fall back to the adjacent .env file.
+dotenv.config({ path: process.env.DOTENV_PATH || path.join(__dirname, '../.env') });
 
 import carriersRouter from './routes/carriers';
 import shipmentsRouter from './routes/shipments';
@@ -32,7 +33,8 @@ export async function startServer(): Promise<HttpServer> {
   app.use(express.urlencoded({ extended: true }));
 
   // Serve uploaded files as static assets
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  // UPLOADS_PATH is set by electron.js in production; fall back to dev path.
+  app.use('/uploads', express.static(process.env.UPLOADS_PATH || path.join(__dirname, '../uploads')));
 
   // Routes
   app.use('/api/carriers', carriersRouter);
