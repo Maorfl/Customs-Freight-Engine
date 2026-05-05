@@ -64,9 +64,11 @@ export async function startServer(): Promise<HttpServer> {
     : process.env.FRONTEND_URL || 'http://localhost:3000';
   initSocketServer(httpServer, socketCorsOrigin);
 
-  // Connect to MongoDB, then start listening
+  // Connect to MongoDB, then start listening.
+  // serverSelectionTimeoutMS: fail fast (10 s) instead of hanging forever.
   await mongoose.connect(
-    process.env.MONGO_URI || 'mongodb://localhost:27017/customs-freight'
+    process.env.MONGO_URI || 'mongodb://localhost:27017/customs-freight',
+    { serverSelectionTimeoutMS: 10000 }
   );
   console.log('Connected to MongoDB');
 
